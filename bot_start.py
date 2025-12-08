@@ -5,7 +5,7 @@ import sys
 from aiogram import Bot, Dispatcher
 
 from bot_main import router as bot_main_router
-from loaded_dotenv import TOKEN_TG
+from loaded_dotenv import BOT_TOKEN_TG
 from main import check_new_data, main as process_stats
 
 # КОНФИГУРАЦИЯ ЛОГГЕРА
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 async def run_long_polling() -> None:
     """Запускает бота в режиме долгого опроса (ожидание команд)"""
-    bot = Bot(TOKEN_TG)
+    bot = Bot(BOT_TOKEN_TG)
     dp = Dispatcher()
     dp.include_router(bot_main_router)
 
@@ -46,7 +46,7 @@ async def main() -> None:
             logger.info("Новых данных нет. Бот завершает работу.")
             return
 
-        bot = Bot(TOKEN_TG)
+        bot = Bot(BOT_TOKEN_TG)
         logger.info("Запуск бота и отправка уведомления")
         # Передаем уже полученные данные, чтобы не делать повторный запрос
         await process_stats(
