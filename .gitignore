@@ -1,3 +1,4 @@
 .env
 venv
 music_stats.json
+__pycache__/
