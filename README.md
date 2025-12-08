@@ -17,12 +17,12 @@
   
 Создайте файл `.env` в корне проекта и укажите:
 ```
-TOKEN_YANDEX=<OAuth-токен сервисов Яндекса*>
-BOT_TOKEN_TG=<токен Telegram-бота**>
+TOKEN_YANDEX=<OAuth-токен сервисов Яндекса¹>
+BOT_TOKEN_TG=<токен Telegram-бота²>
 USER_TG_ID=<ваш USER-ID в Telegram, его можно узнать, прописав в боте команду /start>
 ```
-* проще всего его можно получить [здесь](https://yandex-music.readthedocs.io/en/main/token.html)
-** можно получить у [Bot-Father](https://telegram.me/BotFather)
+1 - проще всего его можно получить [здесь](https://yandex-music.readthedocs.io/en/main/token.html)
+2 - можно получить у [Bot-Father](https://telegram.me/BotFather)
     
 ### Запуск бота
 1 способ: Через скрипт (автоматически активирует venv, запускает бота и завершает работу после отправки сообщения со статистикой):
