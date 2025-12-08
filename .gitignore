@@ -1,2 +1,2 @@
-.env
-music_stats.json
+./.env
+./music_stats.json
