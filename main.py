@@ -27,11 +27,16 @@ async def check_new_data(bot=None):
     return has_new, total_seconds, total_tracks, latest_stats, day_before_yesterday_date
 
 
-async def main(bot=None, prefetched=None):
+async def main(bot=None, prefetched=None, user_id_override=None):
+    storage = StatsStorage()
     """
     Основная логика сохранения статистики и отправки уведомления.
     """
     storage = StatsStorage()
+
+    # Определяем, кому слать сообщение: тому, кто прописал /start, или тому, кто в .env
+    # Если user_id_override передан, используем его. Если нет — берем из .env
+    target_user_id = user_id_override or USER_TG_ID
 
     if prefetched:
         (
@@ -51,10 +56,18 @@ async def main(bot=None, prefetched=None):
         ) = await check_new_data(bot)
 
     if total_seconds is None or total_tracks is None:
-        # Сообщение об ошибке уже отправлено внутри get_yesterday_music_stats или check_new_data
+        message = "Не удалось получить данные из API Яндекса"
+        # ТУТ ИЗМЕНЕНИЕ: используем target_user_id
+        if bot and target_user_id:
+            await bot.send_message(target_user_id, message)
         return False
 
     if not has_new:
+        # Если это ручной запуск через /start, можно уведомить, что данных нет
+        if bot and user_id_override:
+            await bot.send_message(
+                user_id_override, "Статистика не изменилась, новых данных пока нет."
+            )
         return False
 
     # Превращаем объект datetime в строку "YYYY-MM-DD", чтобы он совпадал с форматом в JSON
@@ -106,8 +119,8 @@ async def main(bot=None, prefetched=None):
             f"{total_tracks_m} треков"
         )
 
-        if bot and USER_TG_ID:
-            await bot.send_message(USER_TG_ID, message)
+        if bot and target_user_id:
+            await bot.send_message(target_user_id, message)
 
     return True
 

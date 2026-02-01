@@ -5,7 +5,9 @@ import sys
 from aiogram import Bot, Dispatcher
 
 from bot_main import router as bot_main_router
-from loaded_dotenv import BOT_TOKEN_TG
+
+# Импортируем USER_TG_ID, чтобы проверять его наличие
+from loaded_dotenv import BOT_TOKEN_TG, USER_TG_ID
 from main import check_new_data, main as process_stats
 
 # КОНФИГУРАЦИЯ ЛОГГЕРА
@@ -24,7 +26,9 @@ async def run_long_polling() -> None:
     dp.include_router(bot_main_router)
 
     try:
-        logger.info("Запуск бота в режиме long polling (ожидание команд)")
+        logger.info("Запуск бота в режиме long polling.")
+        logger.info("Бот ждет сообщений (напишите /start для получения ID)...")
+        # В этом режиме мы НЕ проверяем статистику сами, только отвечаем на команды
         await dp.start_polling(bot)
     except Exception as e:
         logger.exception(f"Критическая ошибка в режиме long polling: {e}")
@@ -37,7 +41,7 @@ async def run_long_polling() -> None:
 async def main() -> None:
     """Стандартный режим: проверка данных и отправка уведомления"""
     try:
-        # Сначала проверяем наличие новых данных, чтобы не поднимать бота зря
+        # Сначала проверяем наличие новых данных
         has_new, total_seconds, total_tracks, latest_stats, yesterday_date = (
             await check_new_data()
         )
@@ -47,8 +51,8 @@ async def main() -> None:
             return
 
         bot = Bot(BOT_TOKEN_TG)
-        logger.info("Запуск бота и отправка уведомления")
-        # Передаем уже полученные данные, чтобы не делать повторный запрос
+        logger.info("Запуск бота для обработки статистики...")
+
         await process_stats(
             bot,
             prefetched=(
@@ -59,28 +63,34 @@ async def main() -> None:
                 yesterday_date,
             ),
         )
-        logger.info("Сообщение отправлено, завершаем работу бота")
+
+        # ЧЕСТНАЯ ПРОВЕРКА ОТПРАВКИ
+        if USER_TG_ID:
+            logger.info(f"Сообщение успешно отправлено пользователю {USER_TG_ID}")
+        else:
+            logger.warning(
+                "Статистика сохранена, но сообщение НЕ отправлено (в .env не указан USER_TG_ID)"
+            )
+
+        logger.info("Завершаем работу бота")
+
     except Exception as e:
         logger.exception(f"Ошибка при работе бота: {e}")
     finally:
-        # Корректно закрываем сессию бота, если бот был создан
         if "bot" in locals():
             await bot.session.close()
-            logger.info("Бот успешно остановлен")
+            logger.info("Сессия бота закрыта")
 
 
 if __name__ == "__main__":
-    # Определяем режим запуска: long или стандартный
     mode = sys.argv[1].lower() if len(sys.argv) > 1 else None
 
     try:
         if mode == "long":
-            logger.info("Активирован режим long polling (бот будет работать постоянно)")
+            # Режим для получения ID и тестов
             asyncio.run(run_long_polling())
         else:
-            logger.info(
-                "Запуск в стандартном режиме (проверка данных и отправка уведомления)"
-            )
+            # Режим для Cron/Task Scheduler
             asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Принудительная остановка бота пользователем")
