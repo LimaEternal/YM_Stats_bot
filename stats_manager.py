@@ -1,6 +1,9 @@
 import json
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
+
+# вспомогательная штучка для получения корректной позавчерашней даты
+day_before_yesterday_date = datetime.now() - timedelta(days=2)
 
 
 class MusicStats:
