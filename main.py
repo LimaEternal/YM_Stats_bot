@@ -1,6 +1,12 @@
-from datetime import datetime
-from api_request import get_yesterday_music_stats
+from api_request_time import get_yesterday_music_stats
 from loaded_dotenv import USER_TG_ID
+from api_request_artists import (
+    get_top_artists_month,
+    format_artists_output,
+    load_cached_artists,
+    save_artists_cache,
+    artists_changed,
+)
 
 # Импортируем твою глобальную переменную
 from stats_manager import MusicStats, StatsStorage, day_before_yesterday_date
@@ -62,8 +68,19 @@ async def main(bot=None, prefetched=None, user_id_override=None):
             await bot.send_message(target_user_id, message)
         return False
 
+    # Получаем топ артистов НЕЗАВИСИМО от статистики времени
+    top_artists = await get_top_artists_month(bot)
+
+    # Проверяем и отправляем артистов независимо
+    if top_artists:
+        old_artists = load_cached_artists()
+        if artists_changed(top_artists, old_artists):
+            save_artists_cache(top_artists)
+            if bot and target_user_id:
+                artists_message = format_artists_output(top_artists)
+                await bot.send_message(target_user_id, artists_message)
+
     if not has_new:
-        # Если это ручной запуск через /start, можно уведомить, что данных нет
         if bot and user_id_override:
             await bot.send_message(
                 user_id_override, "Статистика не изменилась, новых данных пока нет."
@@ -83,6 +100,9 @@ async def main(bot=None, prefetched=None, user_id_override=None):
 
     # Сохраняем данные за вчера
     all_stats = storage.load_all_stats()
+    all_stats = [
+        s for s in all_stats if s.date != date_str
+    ]  # удаляем старую запись за эту дату
     all_stats.append(yesterday_stats)
 
     # Теперь сортировка сработает, так как все даты - строки
@@ -114,11 +134,12 @@ async def main(bot=None, prefetched=None, user_id_override=None):
             f"{yesterday_tracks_diff} треков\n"
             f"\n"
             f"ЗА МЕСЯЦ\n"
-            f"{hrs_m:.0f} часов\n"
+            f"{hrs_m:.01f} часов\n"
             f"({mins_m:.0f} мин.)\n"
             f"{total_tracks_m} треков"
         )
 
+        # Потом отправляем статистику времени (это уже существующий код)
         if bot and target_user_id:
             await bot.send_message(target_user_id, message)
 

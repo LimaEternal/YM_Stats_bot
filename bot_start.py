@@ -41,36 +41,61 @@ async def run_long_polling() -> None:
 async def main() -> None:
     """Стандартный режим: проверка данных и отправка уведомления"""
     try:
-        # Сначала проверяем наличие новых данных
+        # Импортируем функции для артистов
+        from api_request_artists import (
+            get_top_artists_month,
+            load_cached_artists,
+            save_artists_cache,
+            artists_changed,
+            format_artists_output,
+        )
+
+        bot = Bot(BOT_TOKEN_TG)
+
+        # Проверяем артистов НЕЗАВИСИМО от статистики времени
+        top_artists = await get_top_artists_month(bot)
+        artists_updated = False
+
+        if top_artists:
+            old_artists = load_cached_artists()
+            if artists_changed(top_artists, old_artists):
+                save_artists_cache(top_artists)
+                artists_updated = True
+                if USER_TG_ID:
+                    artists_message = format_artists_output(top_artists)
+                    await bot.send_message(USER_TG_ID, artists_message)
+                    logger.info("Отправлена обновлённая статистика по артистам")
+
+        # Проверяем статистику времени
         has_new, total_seconds, total_tracks, latest_stats, yesterday_date = (
             await check_new_data()
         )
 
-        if not has_new:
+        if not has_new and not artists_updated:
             logger.info("Новых данных нет. Бот завершает работу.")
+            await bot.session.close()
             return
 
-        bot = Bot(BOT_TOKEN_TG)
-        logger.info("Запуск бота для обработки статистики...")
+        if has_new:
+            logger.info("Запуск бота для обработки статистики...")
 
-        await process_stats(
-            bot,
-            prefetched=(
-                has_new,
-                total_seconds,
-                total_tracks,
-                latest_stats,
-                yesterday_date,
-            ),
-        )
-
-        # ЧЕСТНАЯ ПРОВЕРКА ОТПРАВКИ
-        if USER_TG_ID:
-            logger.info(f"Сообщение успешно отправлено пользователю {USER_TG_ID}")
-        else:
-            logger.warning(
-                "Статистика сохранена, но сообщение НЕ отправлено (в .env не указан USER_TG_ID)"
+            await process_stats(
+                bot,
+                prefetched=(
+                    has_new,
+                    total_seconds,
+                    total_tracks,
+                    latest_stats,
+                    yesterday_date,
+                ),
             )
+
+            if USER_TG_ID:
+                logger.info(f"Сообщение успешно отправлено пользователю {USER_TG_ID}")
+            else:
+                logger.warning(
+                    "Статистика сохранена, но сообщение НЕ отправлено (в .env не указан USER_TG_ID)"
+                )
 
         logger.info("Завершаем работу бота")
 
